@@ -1,0 +1,1 @@
+export const PURCHASED_SERVER_PREFIX = "purchased"

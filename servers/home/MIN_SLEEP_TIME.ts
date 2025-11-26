@@ -1,0 +1,1 @@
+export const MIN_SLEEP_TIME = 4
