@@ -18,7 +18,7 @@ const createContext = async () => await context({
       //   'build/home/dist': ['n00dles'],
       },
       mirror: {
-        'mirror/home': ['home'],
+        'mirror': ['home'],
       },
       pushOnConnect: true,
     })
