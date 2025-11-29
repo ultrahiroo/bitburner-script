@@ -13,7 +13,8 @@ export class VirtualHostServerList {
   }) {
     this.ns = x.ns
     this.value = []
-    const hostServerNameList = getHostServerNameList(x.ns)
+    const serverList = getServerList(x.ns)
+    const hostServerNameList = getHostServerNameList(x.ns, serverList)
     for (let i = 0; i < hostServerNameList.length; i++) {
       const hostServerName = hostServerNameList[i]
       const virtualHostServer = new VirtualHostServer({
@@ -72,21 +73,6 @@ export class VirtualHostServerList {
 }
 
 export async function main(ns: NS): Promise<void> {
-  const serverList = getServerList(ns)
-  const sortedServerList = serverList.toSorted((a, b) => {
-    if (a == "home") {
-      return 1
-    }
-    if (isPurchasedServer(a)) {
-      if (b == "home") {
-        return -1
-      }
-      return 1
-    }
-    return ns.getServerMaxRam(a) - ns.getServerMaxRam(b)
-  })
-  ns.tprint(`sortedServerList: ${sortedServerList}`)
-
   const requestedRamList = [8, 8, 8, 16, 32, 64, 128, 256]
   const virtualHostServerList = new VirtualHostServerList({ ns: ns })
 
@@ -96,6 +82,11 @@ export async function main(ns: NS): Promise<void> {
       continue
     }
     virtualHostServer.setActive()
+  }
+
+  for (let i = 0; i < virtualHostServerList.value.length; i++) {
+    const virtualHostServer = virtualHostServerList.value[i]
+    ns.tprint(`name: ${virtualHostServer.name}, isActive: ${virtualHostServer.isActive}, maxRam: ${ns.formatRam(virtualHostServer.maxRam)}`)
   }
 
   for (let i = 0; i < requestedRamList.length; i++) {

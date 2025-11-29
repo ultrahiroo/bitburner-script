@@ -38,16 +38,16 @@ export class JobCreator {
     endMarginTime: number
   }) {
     if (!((0 <= x.securityThresholdMarginRatio) && (x.securityThresholdMarginRatio < 1))) {
-      throw new Error("invalid value")
+      throw new Error(`invalid value, securityThresholdMarginRatio: ${x.securityThresholdMarginRatio}`)
     }
     if (!((0 <= x.moneyThresholdMarginRatio) && (x.moneyThresholdMarginRatio < 1))) {
-      throw new Error("invalid value")
+      throw new Error(`invalid value, moneyThresholdMarginRatio: ${x.moneyThresholdMarginRatio}`)
     }
-    if (!(x.startMarginTime <= 0)) {
-      throw new Error("invalid value")
+    if (!(x.startMarginTime > 0)) {
+      throw new Error(`invalid value, startMarginTime: ${x.startMarginTime}`)
     }
-    if (!(x.endMarginTime <= 0)) {
-      throw new Error("invalid value")
+    if (!(x.endMarginTime > 0)) {
+      throw new Error(`invalid value, endMarginTime: ${x.endMarginTime}`)
     }
 
     this.ns = x.ns
@@ -307,6 +307,9 @@ export class JobCreator {
   keepSize(jobListValue: Array<Job>): void {
     for (let i = 0; i < this.virtualTargetServerList.value.length; i++) {
       const virtualTargetServer = this.virtualTargetServerList.value[i]
+      if (!virtualTargetServer.isActive) {
+        continue
+      }
       this.pushJobLoop(virtualTargetServer, jobListValue)
     }
   }

@@ -1,17 +1,21 @@
 import { getServerList } from "../getServerList.ts"
-import { getSortedByAvailableMoneyServerList } from "../getSortedByAvailableMoneyServerList.ts"
 import { isPurchasedServer } from "../purchased-server/isPurchasedServer.ts"
 
 export function getTargetServerNameList(
-  sortedServerList: Array<string>,
+  ns: NS,
+  serverList: Array<string>,
 ): Array<string> {
   const y: Array<string> = []
-  for (let i = 0; i < sortedServerList.length; i++) {
-    const severName = sortedServerList[i]
+  for (let i = 0; i < serverList.length; i++) {
+    const severName = serverList[i]
     if (severName == "home") {
       continue
     }
     if (isPurchasedServer(severName)) {
+      continue
+    }
+    const server = ns.getServer(severName)
+    if (server.moneyMax == 0) {
       continue
     }
     y.push(severName)
@@ -21,7 +25,6 @@ export function getTargetServerNameList(
 
 export async function main(ns: NS): Promise<void> {
   const serverList = getServerList(ns)
-  const sortedServerList = getSortedByAvailableMoneyServerList(ns, serverList)
-  const targetServerList = getTargetServerNameList(sortedServerList)
+  const targetServerList = getTargetServerNameList(ns, serverList)
   ns.tprint(`targetServerList: ${targetServerList}`)
 }

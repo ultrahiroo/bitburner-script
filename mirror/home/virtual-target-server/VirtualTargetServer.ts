@@ -25,6 +25,9 @@ export class VirtualTargetServer {
     if (server.moneyMax == undefined) {
       throw new Error("invalid value")
     }
+    if (server.moneyMax == 0) {
+      throw new Error("invalid value")
+    }
     if (server.hackDifficulty == undefined) {
       throw new Error("invalid value")
     }
@@ -61,7 +64,7 @@ export class VirtualTargetServer {
   }
 
   weaken(threadSize: number, coreSize: number): void {
-    if (this.isActive) {
+    if (!this.isActive) {
       throw new Error("virtual target server was not activated")
     }
     const newSecurity = this.security - this.ns.weakenAnalyze(threadSize, coreSize)
@@ -69,7 +72,7 @@ export class VirtualTargetServer {
   }
 
   grow(threadSize: number, coreSize: number): void {
-    if (this.isActive) {
+    if (!this.isActive) {
       throw new Error("virtual target server was not activated")
     }
     const newMoney = (this.money + threadSize) * calculateServerGrowth(this.ns, this.name, threadSize, coreSize)
@@ -79,7 +82,7 @@ export class VirtualTargetServer {
   }
 
   hack(threadSize: number): void {
-    if (this.isActive) {
+    if (!this.isActive) {
       throw new Error("virtual target server was not activated")
     }
     const newMoney = this.money * (1 - this.ns.hackAnalyze(this.name) * threadSize)

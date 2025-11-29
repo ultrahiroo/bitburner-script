@@ -13,7 +13,7 @@ export class VirtualTargetServerList {
     this.ns = x.ns
     this.value = []
     const serverList = getServerList(x.ns)
-    const targetServerNameList = getTargetServerNameList(serverList)
+    const targetServerNameList = getTargetServerNameList(x.ns, serverList)
     for (let i = 0; i < targetServerNameList.length; i++) {
       const targetServerName = targetServerNameList[i]
       const virtualTargetServer = new VirtualTargetServer({
@@ -59,6 +59,6 @@ export async function main(ns: NS): Promise<void> {
   const virtualTargetServerList = new VirtualTargetServerList({ ns: ns })
   for (let i = 0; i < virtualTargetServerList.value.length; i++) {
     const virtualTargetServer = virtualTargetServerList.value[i]
-    ns.tprint(`name: ${virtualTargetServer.name}, isActive: ${virtualTargetServer.isActive}`)
+    ns.tprint(`name: ${virtualTargetServer.name}, isActive: ${virtualTargetServer.isActive}, maxMoney: ${virtualTargetServer.maxMoney}`)
   }
 }
