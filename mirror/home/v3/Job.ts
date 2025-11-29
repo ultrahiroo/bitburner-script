@@ -46,9 +46,6 @@ export class Job {
   }
 
   execute(ns: NS): boolean {
-    if (this.action == Action.NONE) {
-      return true
-    }
     if (ns.exec(
       this.script,
       this.host,
@@ -66,17 +63,5 @@ export class Job {
 }
 
 export async function main(ns: NS): Promise<void> {
-  const _ = new Job({
-    action: Action.NONE,
-    target: "",
-    host: "",
-    endTimestamp: 0,
-    executionTime: 0,
-    threadSize: 0,
-    requiredRam: 0,
-    expectedMoney: 0,
-    expectedSecurity: 0,
-    script: "",
-    message: "",
-  })
+  return
 }

@@ -1,3 +1,3 @@
 export async function main(ns: NS) {
-  // await ns.singularity.installBackdoor()
+  await ns.singularity.installBackdoor()
 }

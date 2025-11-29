@@ -1,25 +1,39 @@
 import { AllocationData } from "./AllocationData.ts"
 import { VirtualHostServer } from "./VirtualHostServer.ts"
+import { getHostServerNameList } from "./getHostServerNameList.ts"
 import { getServerList } from "../getServerList.ts"
+import { isPurchasedServer } from "../purchased-server/isPurchasedServer.ts"
 
 export class VirtualHostServerList {
+  ns: NS
   value: Array<VirtualHostServer>
 
   constructor(x: {
     ns: NS
   }) {
+    this.ns = x.ns
     this.value = []
-    const serverList = getServerList(x.ns)
-    for (let i = 0; i < serverList.length; i++) {
-      const host = serverList[i]
+    const hostServerNameList = getHostServerNameList(x.ns)
+    for (let i = 0; i < hostServerNameList.length; i++) {
+      const hostServerName = hostServerNameList[i]
       const virtualHostServer = new VirtualHostServer({
         ns: x.ns,
-        name: host,
+        name: hostServerName,
       })
       this.value.push(virtualHostServer)
     }
+    this._sort()
+  }
+
+  _sort(): void {
     this.value.sort((a, b) => {
       if (a.name == "home") {
+        return 1
+      }
+      if (isPurchasedServer(a.name)) {
+        if (b.name == "home") {
+          return -1
+        }
         return 1
       }
       return a.maxRam - b.maxRam
@@ -30,7 +44,7 @@ export class VirtualHostServerList {
     data: AllocationData,
     dryRun: boolean = false,
   ): VirtualHostServer | undefined {
-    let y = undefined
+    let y: VirtualHostServer | undefined = undefined
     for (let i = 0; i < this.value.length; i++) {
       const virtualHostServer = this.value[i]
       if (!virtualHostServer.allocate(data, dryRun)) {
@@ -48,9 +62,31 @@ export class VirtualHostServerList {
       virtualHostServer.update(currentTimestamp)
     }
   }
+
+  updateSpec(): void {
+    for (let i = 0; i < this.value.length; i++) {
+      const virtualHostServer = this.value[i]
+      virtualHostServer.updateSpec(this.ns)
+    }
+  }
 }
 
 export async function main(ns: NS): Promise<void> {
+  const serverList = getServerList(ns)
+  const sortedServerList = serverList.toSorted((a, b) => {
+    if (a == "home") {
+      return 1
+    }
+    if (isPurchasedServer(a)) {
+      if (b == "home") {
+        return -1
+      }
+      return 1
+    }
+    return ns.getServerMaxRam(a) - ns.getServerMaxRam(b)
+  })
+  ns.tprint(`sortedServerList: ${sortedServerList}`)
+
   const requestedRamList = [8, 8, 8, 16, 32, 64, 128, 256]
   const virtualHostServerList = new VirtualHostServerList({ ns: ns })
 

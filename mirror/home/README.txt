@@ -1,5 +1,14 @@
+# TODO
+- target server adjustment
+- add share action pass
+
 # Check
-- [x] do not use ns.sleep()
+- [x] Do not use ns.sleep(). Instead, use ns.asleep()
+- [x] Do not use any barrel files such as index.js(.ts), because of incorrect ram usage calculation
+- [ ] Do not use ns.getServerMoneyAvailable()
+- [ ] Do not use ns.getServerMaxMoney()
+- [ ] Do not use ns.getServerSecurityLevel()
+- [ ] Do not use ns.getServerMinSecurityLevel()
 
 # Reference
 - JavaScriptの1msは4ms - https://qiita.com/suetake/items/6c20d885d833ca792dfa

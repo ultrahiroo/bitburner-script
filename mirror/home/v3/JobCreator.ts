@@ -1,117 +1,95 @@
 import { Action } from "./Action.ts"
+import { AllocationData } from "../virtual-host-server/AllocationData.ts"
 import { Job } from "./Job.ts"
 import { ScriptInfo } from "./ScriptInfo.ts"
-import { VirtualServer } from "./VirtualServer.ts"
-import { AllocationData, VirtualHostServerList } from "../virtual-host-server/index"
+import { VirtualHostServerList } from "../virtual-host-server/VirtualHostServerList.ts"
+import { VirtualTargetServer } from "../virtual-target-server/VirtualTargetServer.ts"
+import { VirtualTargetServerList } from "../virtual-target-server/VirtualTargetServerList.ts"
 import { getRootAccess } from "../getRootAccess.ts"
-import { getServerList } from "../getServerList.ts"
-import { getSortedByAvailableMoneyServerList } from "../getSortedByAvailableMoneyServerList.ts"
-import { getTargetServerList } from "../getTargetServerList.ts"
 
-const DEFAULT_TARGET = "n00dles"
 
 export class JobCreator {
   ns: NS
-  serverList: Array<string>
-  sortedServerList: Array<string>
   virtualHostServerList: VirtualHostServerList
-  virtualServer: VirtualServer
+  virtualTargetServerList: VirtualTargetServerList
   scriptInfo: ScriptInfo
-  securityThreshold: number
-  moneyThreshold: number
   sequentialLag: number
-  initialMarginTime: number
-  endTimestamp: number
   weakenMaxThreadSize: number
   growMaxThreadSize: number
   hackMaxThreadSize: number
   startAllocationMarginTime: number
   endAllocationMarginTime: number
+  securityThresholdRatio: number
+  moneyThresholdRatio: number
+  startMarginTime: number
+  endMarginTime: number
 
   constructor(x: {
     ns: NS
     sequentialLag: number
-    initialMarginTime: number
     weakenMaxThreadSize: number
     growMaxThreadSize: number
     hackMaxThreadSize: number
     startAllocationMarginTime: number
     endAllocationMarginTime: number
+    securityThresholdMarginRatio: number
+    moneyThresholdMarginRatio: number
+    startMarginTime: number
+    endMarginTime: number
   }) {
-    const serverList = getServerList(x.ns)
+    if (!((0 <= x.securityThresholdMarginRatio) && (x.securityThresholdMarginRatio < 1))) {
+      throw new Error("invalid value")
+    }
+    if (!((0 <= x.moneyThresholdMarginRatio) && (x.moneyThresholdMarginRatio < 1))) {
+      throw new Error("invalid value")
+    }
+    if (!(x.startMarginTime <= 0)) {
+      throw new Error("invalid value")
+    }
+    if (!(x.endMarginTime <= 0)) {
+      throw new Error("invalid value")
+    }
 
     this.ns = x.ns
-    this.serverList = serverList
-    this.sortedServerList = getSortedByAvailableMoneyServerList(x.ns, serverList)
     this.virtualHostServerList = new VirtualHostServerList({ ns: x.ns })
-    this.virtualServer = new VirtualServer({ ns: x.ns, target: DEFAULT_TARGET })
+    this.virtualTargetServerList = new VirtualTargetServerList({ ns: x.ns })
     this.scriptInfo = new ScriptInfo({ ns: x.ns })
-    this.moneyThreshold = NaN
-    this.securityThreshold = NaN
     this.sequentialLag = x.sequentialLag
-    this.initialMarginTime = x.initialMarginTime
-    this.endTimestamp = NaN
     this.weakenMaxThreadSize = x.weakenMaxThreadSize
     this.growMaxThreadSize = x.growMaxThreadSize
     this.hackMaxThreadSize = x.hackMaxThreadSize
     this.startAllocationMarginTime = x.startAllocationMarginTime
     this.endAllocationMarginTime = x.endAllocationMarginTime
+    this.moneyThresholdRatio = x.moneyThresholdMarginRatio
+    this.securityThresholdRatio = x.moneyThresholdMarginRatio
+    this.startMarginTime = x.startMarginTime
+    this.endMarginTime = x.endMarginTime
 
     // initialize
-    const newTargetServerName = this.getNewTargetServerName()
-    this.setTargetServer(newTargetServerName)
-    this.updateVirtualHostServerList()
+    this.updateVirtualHostServerActive()
   }
 
-  getNewTargetServerName(): string {
-    const targetServerList = getTargetServerList(this.ns, this.sortedServerList)
-    let y = DEFAULT_TARGET
-    for (let i = 0; i < targetServerList.length; i++) {
-      const target = targetServerList[i]
-      if (!this.ns.hasRootAccess(target)) {
-        if (!getRootAccess(this.ns, target)) {
-          continue
-        }
-      }
-      y = target
-      break
-    }
-    return y
-  }
-
-  setTargetServer(name: string): void {
-    this.virtualServer = new VirtualServer({
-      ns: this.ns,
-      target: name,
-    })
-
-    this.moneyThreshold = this.ns.getServerMaxMoney(name)
-    this.securityThreshold = this.ns.getServerMinSecurityLevel(name)
-
-    const hackTime = this.ns.getHackTime(name)
-    const growTime = this.ns.getGrowTime(name)
-    const weakenTime = this.ns.getWeakenTime(name)
-    const minLag = Math.max(hackTime, growTime, weakenTime)
-    this.endTimestamp = Date.now() + minLag + this.initialMarginTime
-
-    if (true) { // TODO
-      this.ns.print(`name: ${name}`)
-      this.ns.print(`this.initialMarginTime: ${this.initialMarginTime}`)
-      this.ns.print(`minLag: ${minLag}`)
-    }
-  }
-
-  pushWeakJob(yList: Array<Job>): boolean {
-    const target = this.virtualServer.target
+  pushWeakJob(
+    virtualTargetServer: VirtualTargetServer,
+    securityThreshold: number,
+    yList: Array<Job>,
+  ): boolean {
+    const target = virtualTargetServer.name
     const singleCoreWeakenThreadSize = Math.min(
       this.weakenMaxThreadSize,
-      Math.ceil((this.virtualServer.security - this.securityThreshold) / this.ns.weakenAnalyze(1, 1)),
+      Math.ceil((virtualTargetServer.security - securityThreshold) / this.ns.weakenAnalyze(1, 1)),
     )
     const singleCoreRequiredRam = this.scriptInfo.weakenScriptRam * singleCoreWeakenThreadSize
     const executionTime = this.ns.getWeakenTime(target)
 
-    const allocationStartTimestamp = this.endTimestamp - executionTime - this.startAllocationMarginTime
-    const allocationEndTimestamp = this.endTimestamp + this.endAllocationMarginTime
+    const endTimestamp = virtualTargetServer.timestamp
+    const allocationStartTimestamp = endTimestamp - executionTime - this.startAllocationMarginTime
+    const allocationEndTimestamp = endTimestamp + this.endAllocationMarginTime
+
+    if (allocationStartTimestamp < Date.now() + this.startMarginTime) {
+      this.ns.print(`DEBUG allocation has failed, target: ${target}, allocationStartTimestamp: ${allocationStartTimestamp}`)
+      return false
+    }
 
     const singleCoreAllocationData = new AllocationData({
       usedRam: singleCoreRequiredRam,
@@ -120,14 +98,14 @@ export class JobCreator {
     })
     const virtualHostServer = this.virtualHostServerList.allocate(singleCoreAllocationData, true)
     if (virtualHostServer == undefined) {
-      this.ns.print(`allocation has failed, singleCoreRequiredRam: ${singleCoreRequiredRam}`)
+      this.ns.print(`DEBUG allocation has failed, target: ${target}, singleCoreRequiredRam: ${singleCoreRequiredRam}`)
       return false
     }
 
     const coreSize = virtualHostServer.coreSize
     const weakenThreadSize = Math.min(
       this.weakenMaxThreadSize,
-      Math.ceil((this.virtualServer.security - this.securityThreshold) / this.ns.weakenAnalyze(1, coreSize)),
+      Math.ceil((virtualTargetServer.security - securityThreshold) / this.ns.weakenAnalyze(1, coreSize)),
     )
     const requiredRam = this.scriptInfo.weakenScriptRam * weakenThreadSize
     const allocationData = new AllocationData({
@@ -136,32 +114,36 @@ export class JobCreator {
       endTimestamp: allocationEndTimestamp,
     })
     if (!virtualHostServer.allocate(allocationData, false)) {
-      this.ns.print(`allocation has failed, requiredRam: ${requiredRam}`)
-      this.ns.print(`singleCoreWeakenThreadSize: ${singleCoreWeakenThreadSize}`)
-      this.ns.print(`weakenThreadSize: ${weakenThreadSize}`)
+      this.ns.print(`DEBUG allocation has failed, target: ${target}, requiredRam: ${requiredRam}`)
+      this.ns.print(`DEBUG singleCoreWeakenThreadSize: ${singleCoreWeakenThreadSize}`)
+      this.ns.print(`DEBUG weakenThreadSize: ${weakenThreadSize}`)
       return false
     }
 
-    this.virtualServer.weaken(weakenThreadSize, coreSize)
+    virtualTargetServer.weaken(weakenThreadSize, coreSize)
     yList.push(new Job({
       action: Action.WEAKEN,
       target: target,
       host: virtualHostServer.name,
-      endTimestamp: this.endTimestamp,
+      endTimestamp: endTimestamp,
       executionTime: executionTime,
       threadSize: weakenThreadSize,
       requiredRam: requiredRam,
-      expectedMoney: this.virtualServer.money,
-      expectedSecurity: this.virtualServer.security,
+      expectedMoney: virtualTargetServer.money,
+      expectedSecurity: virtualTargetServer.security,
       script: this.scriptInfo.weakenScript,
       message: "",
     }))
     return true
   }
 
-  pushGrowJob(yList: Array<Job>): boolean {
-    const target = this.virtualServer.target
-    const multiplier = this.moneyThreshold / this.virtualServer.money
+  pushGrowJob(
+    virtualTargetServer: VirtualTargetServer,
+    moneyThreshold: number,
+    yList: Array<Job>,
+  ): boolean {
+    const target = virtualTargetServer.name
+    const multiplier = moneyThreshold / virtualTargetServer.money
     const singleCoreGrowThreadSize = Math.min(
       this.growMaxThreadSize,
       Math.ceil(this.ns.growthAnalyze(target, multiplier, 1)),
@@ -169,8 +151,14 @@ export class JobCreator {
     const singleCoreRequiredRam = this.scriptInfo.growScriptRam * singleCoreGrowThreadSize
     const executionTime = this.ns.getGrowTime(target)
 
-    const allocationStartTimestamp = this.endTimestamp - executionTime - this.startAllocationMarginTime
-    const allocationEndTimestamp = this.endTimestamp + this.endAllocationMarginTime
+    const endTimestamp = virtualTargetServer.timestamp
+    const allocationStartTimestamp = endTimestamp - executionTime - this.startAllocationMarginTime
+    const allocationEndTimestamp = endTimestamp + this.endAllocationMarginTime
+
+    if (allocationStartTimestamp < Date.now() + this.startMarginTime) {
+      this.ns.print(`DEBUG allocation has failed, target: ${target}, allocationStartTimestamp: ${allocationStartTimestamp}`)
+      return false
+    }
 
     const singleCoreAllocationData = new AllocationData({
       usedRam: singleCoreRequiredRam,
@@ -179,7 +167,7 @@ export class JobCreator {
     })
     const virtualHostServer = this.virtualHostServerList.allocate(singleCoreAllocationData, true)
     if (virtualHostServer == undefined) {
-      this.ns.print(`allocation has failed, singleCoreRequiredRam: ${singleCoreRequiredRam}`)
+      this.ns.print(`DEBUG allocation has failed, target: ${target}, singleCoreRequiredRam: ${singleCoreRequiredRam}`)
       return false
     }
     const coreSize = virtualHostServer.coreSize
@@ -195,29 +183,32 @@ export class JobCreator {
       endTimestamp: allocationEndTimestamp,
     })
     if (!virtualHostServer.allocate(allocationData, false)) {
-      this.ns.print(`allocation has failed, requiredRam: ${requiredRam}`)
+      this.ns.print(`DEBUG allocation has failed, target: ${target}, requiredRam: ${requiredRam}`)
       return false
     }
 
-    this.virtualServer.grow(growThreadSize, coreSize)
+    virtualTargetServer.grow(growThreadSize, coreSize)
     yList.push(new Job({
       action: Action.GROW,
       target: target,
       host: virtualHostServer.name,
-      endTimestamp: this.endTimestamp,
+      endTimestamp: endTimestamp,
       executionTime: executionTime,
       threadSize: growThreadSize,
       requiredRam: requiredRam,
-      expectedMoney: this.virtualServer.money,
-      expectedSecurity: this.virtualServer.security,
+      expectedMoney: virtualTargetServer.money,
+      expectedSecurity: virtualTargetServer.security,
       script: this.scriptInfo.growScript,
       message: "",
     }))
     return true
   }
 
-  pushHackJob(yList: Array<Job>): boolean {
-    const target = this.virtualServer.target
+  pushHackJob(
+    virtualTargetServer: VirtualTargetServer,
+    yList: Array<Job>,
+  ): boolean {
+    const target = virtualTargetServer.name
     const hackThreadSize = Math.min(
       this.hackMaxThreadSize,
       Math.trunc(this.ns.weakenAnalyze(1, 1) / this.ns.hackAnalyzeSecurity(1))
@@ -225,8 +216,14 @@ export class JobCreator {
     const requiredRam = this.scriptInfo.hackScriptRam * hackThreadSize
     const executionTime = this.ns.getHackTime(target)
 
-    const allocationStartTimestamp = this.endTimestamp - executionTime - this.startAllocationMarginTime
-    const allocationEndTimestamp = this.endTimestamp + this.endAllocationMarginTime
+    const endTimestamp = virtualTargetServer.timestamp
+    const allocationStartTimestamp = endTimestamp - executionTime - this.startAllocationMarginTime
+    const allocationEndTimestamp = endTimestamp + this.endAllocationMarginTime
+
+    if (allocationStartTimestamp < Date.now() + this.startMarginTime) {
+      this.ns.print(`DEBUG allocation has failed, target: ${target}, allocationStartTimestamp: ${allocationStartTimestamp}`)
+      return false
+    }
 
     const allocationData = new AllocationData({
       usedRam: requiredRam,
@@ -235,93 +232,94 @@ export class JobCreator {
     })
     const virtualHostServer = this.virtualHostServerList.allocate(allocationData, false)
     if (virtualHostServer == undefined) {
-      this.ns.print(`allocation has failed, requiredRam: ${requiredRam}`)
+      this.ns.print(`DEBUG allocation has failed, target: ${target}, requiredRam: ${requiredRam}`)
       return false
     }
 
-    this.virtualServer.hack(hackThreadSize)
+    virtualTargetServer.hack(hackThreadSize)
     yList.push(new Job({
       action: Action.HACK,
       target: target,
       host: virtualHostServer.name,
-      endTimestamp: this.endTimestamp,
+      endTimestamp: endTimestamp,
       executionTime: executionTime,
       threadSize: hackThreadSize,
       requiredRam: requiredRam,
-      expectedMoney: this.virtualServer.money,
-      expectedSecurity: this.virtualServer.security,
+      expectedMoney: virtualTargetServer.money,
+      expectedSecurity: virtualTargetServer.security,
       script: this.scriptInfo.hackScript,
       message: "",
     }))
     return true
   }
 
-  pushNoneJob(yList: Array<Job>): boolean {
-    yList.push(new Job({
-      action: Action.NONE,
-      target: this.virtualServer.target,
-      host: "",
-      endTimestamp: this.endTimestamp,
-      executionTime: 0,
-      threadSize: 0,
-      requiredRam: 0,
-      expectedMoney: this.virtualServer.money,
-      expectedSecurity: this.virtualServer.security,
-      script: "",
-      message: "",
-    }))
-    return true
-  }
+  pushJobLoop(
+    virtualTargetServer: VirtualTargetServer,
+    yList: Array<Job>,
+  ): void {
+    const moneyThreshold = virtualTargetServer.maxMoney * (1 - this.moneyThresholdRatio)
+    const securityThreshold = virtualTargetServer.minSecurity * (1 + this.securityThresholdRatio)
+    const severName = virtualTargetServer.name
+    const hackTime = this.ns.getHackTime(severName)
+    const growTime = this.ns.getGrowTime(severName)
+    const weakenTime = this.ns.getWeakenTime(severName)
+    const minLag = Math.max(hackTime, growTime, weakenTime) + this.endMarginTime
+    const minTimestamp = Date.now() + minLag
+    const maxSize = Math.ceil(minLag / this.sequentialLag)
 
-  pushJob(yList: Array<Job>): void {
-    if (this.virtualServer.security > this.securityThreshold) {
-      if (!this.pushWeakJob(yList)) {
-        this.pushNoneJob(yList)
-      }
-      this.endTimestamp += this.sequentialLag
-    } else if (this.virtualServer.money < this.moneyThreshold) {
-      if (!this.pushGrowJob(yList)) {
-        this.pushNoneJob(yList)
-      }
-      this.endTimestamp += this.sequentialLag
-    } else {
-      if (!this.pushHackJob(yList)) {
-        this.pushNoneJob(yList)
-      }
-      this.endTimestamp += this.sequentialLag
-      if (!this.pushGrowJob(yList)) {
-        this.pushNoneJob(yList)
-      }
-      this.endTimestamp += this.sequentialLag
-      this.endTimestamp += this.sequentialLag
-      if (!this.pushWeakJob(yList)) {
-        this.pushNoneJob(yList)
-      }
-      this.endTimestamp += this.sequentialLag
-      this.endTimestamp += this.sequentialLag
-      this.endTimestamp += this.sequentialLag
-    }
-  }
-
-  keepSize(minSize: number, jobListValue: Array<Job>): void {
-    for (let i = 0; i < minSize; i++) {
-      if (jobListValue.length >= minSize) {
+    for (let i = 0; i < maxSize; i++) {
+      if (virtualTargetServer.timestamp >= minTimestamp) {
         break
       }
-      this.pushJob(jobListValue)
-    }
-    if (jobListValue.length < minSize) {
-      throw new Error(`ERROR expected minimum size: ${minSize}, actual size: ${jobListValue.length}`)
+      if (virtualTargetServer.security > securityThreshold) {
+        this.pushWeakJob(virtualTargetServer, securityThreshold, yList)
+        virtualTargetServer.timestamp += this.sequentialLag
+
+      } else if (virtualTargetServer.money < moneyThreshold) {
+        this.pushGrowJob(virtualTargetServer, moneyThreshold, yList)
+        virtualTargetServer.timestamp += this.sequentialLag
+
+      } else {
+        if (!this.pushHackJob(virtualTargetServer, yList)) {
+          virtualTargetServer.timestamp += this.sequentialLag
+          continue
+        }
+        virtualTargetServer.timestamp += this.sequentialLag
+
+        if (!this.pushGrowJob(virtualTargetServer, moneyThreshold, yList)) {
+          virtualTargetServer.timestamp += this.sequentialLag
+          continue
+        }
+        virtualTargetServer.timestamp += this.sequentialLag
+        virtualTargetServer.timestamp += this.sequentialLag
+
+        if (!this.pushWeakJob(virtualTargetServer, securityThreshold, yList)) {
+          virtualTargetServer.timestamp += this.sequentialLag
+          continue
+        }
+        virtualTargetServer.timestamp += this.sequentialLag
+        virtualTargetServer.timestamp += this.sequentialLag
+        virtualTargetServer.timestamp += this.sequentialLag
+      }
     }
   }
 
-  updateVirtualHostServerList(): void {
+  keepSize(jobListValue: Array<Job>): void {
+    for (let i = 0; i < this.virtualTargetServerList.value.length; i++) {
+      const virtualTargetServer = this.virtualTargetServerList.value[i]
+      this.pushJobLoop(virtualTargetServer, jobListValue)
+    }
+  }
+
+  updateVirtualHostServerActive(): void {
     for (let i = 0; i < this.virtualHostServerList.value.length; i++) {
       const virtualHostServer = this.virtualHostServerList.value[i]
       if (virtualHostServer.isActive) {
         continue
       }
-
+      if (virtualHostServer.maxRam == 0) {
+        continue
+      }
       const serverName = virtualHostServer.name
       if (!this.ns.hasRootAccess(serverName)) {
         if (!getRootAccess(this.ns, serverName)) {
@@ -336,13 +334,9 @@ export class JobCreator {
   update(): void {
     const currentTimestamp = Date.now()
     this.virtualHostServerList.update(currentTimestamp)
-
-    const newTargetServerName = this.getNewTargetServerName()
-    if (newTargetServerName != this.virtualServer.target) {
-      this.setTargetServer(newTargetServerName)
-    }
-
-    this.updateVirtualHostServerList()
+    this.virtualHostServerList.updateSpec()
+    this.updateVirtualHostServerActive()
+    this.virtualTargetServerList.updateActive()
   }
 }
 

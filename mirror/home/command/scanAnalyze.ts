@@ -1,5 +1,4 @@
-/** @param {NS} ns */
-export async function main(ns) {
+export async function main(ns: NS): Promise<void> {
   function addCSS() {
     const doc = eval("document");  // NetScript 'document' replacement object.
     const customStyleName = "aDifferentID";
@@ -35,7 +34,7 @@ export async function main(ns) {
     var terminalInput = eval("document").getElementById("terminal-input"), terminalEventHandlerKey = Object.keys(terminalInput)[1];
     terminalInput.value = command;
     terminalInput[terminalEventHandlerKey].onChange({ target: terminalInput });
-    setTimeout(function (event) {
+    setTimeout(function(event) {
       terminalInput.focus();
       terminalInput[terminalEventHandlerKey].onKeyDown({ key: 'Enter', preventDefault: () => 0 });
     }, 0);
@@ -49,12 +48,12 @@ export async function main(ns) {
     if (altText == "") {
       return React.createElement("a", {
         style: linkStyle, className: "rLink",
-        onClick: function (event) { runTerminalCommand(command); }
+        onClick: function(event) { runTerminalCommand(command); }
       }, text);
     } else {
       return React.createElement("a", {
         style: linkStyle, className: "rLink", title: altText,
-        onClick: function (event) { runTerminalCommand(command); }
+        onClick: function(event) { runTerminalCommand(command); }
       }, text);
     }
   }

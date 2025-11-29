@@ -55,8 +55,7 @@ export function getRootAccess(ns: NS, host: string): boolean {
     }
   }
   if (requiredPortSize >= 6) {
-    ns.tprint(`ERROR required_port_size: ${requiredPortSize}`)
-    return false
+    throw new Error(`ERROR required_port_size: ${requiredPortSize}`)
   }
   const nukeFlag = ns.nuke(host)
   if (!nukeFlag) {

@@ -1,6 +1,6 @@
 function _scanRecursive(ns: NS, host: string, parent: string): Map<string, any> {
   // const y = new Map<string, any>()
-   const y = {}
+  const y = {}
   const host_list = ns.scan(host)
   for (let i = 0; i < host_list.length; i++) {
     const next_host = host_list[i]

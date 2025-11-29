@@ -4,31 +4,28 @@ import { JobList } from "./JobList.ts"
 
 export async function main(ns: NS): Promise<void> {
   ns.disableLog("ALL")
-  const initialMarginTime = 3 * 1000 // milisecond
   const sequentialLag = 1000 // milisecond
   const maxAdditionalTime = sequentialLag + (1 * 1000) // milisecond
   const verbose = false
-
-  const jobListSizeThreshold = 1000
-  // const jobListSizeThreshold = Math.ceil((initialMarginTime + minLag) / sequentialLag) * 2 // TODO
-  ns.print(`jobListSizeThreshold: ${jobListSizeThreshold}`)
-
   const jobCreator = new JobCreator({
     ns: ns,
     sequentialLag: sequentialLag,
-    initialMarginTime: initialMarginTime,
     weakenMaxThreadSize: 64,
     growMaxThreadSize: 64,
     hackMaxThreadSize: 64,
     startAllocationMarginTime: maxAdditionalTime,
     endAllocationMarginTime: 5 * 1000,
+    securityThresholdMarginRatio: 0.10,
+    moneyThresholdMarginRatio: 0.10,
+    startMarginTime: 3 * 1000,
+    endMarginTime: 3 * 1000,
   })
   const jobList = new JobList({
     ns: ns,
   })
 
   // initialzing
-  jobCreator.keepSize(jobListSizeThreshold, jobList.value)
+  jobCreator.keepSize(jobList.value)
   jobList.updateExecutionTime()
   jobList.updateStartTimestamp()
   jobList.sortByStartTimestamp()
@@ -72,7 +69,7 @@ export async function main(ns: NS): Promise<void> {
     ns.print(`${tagString}hasExecuted: ${hasExecuted}, action: ${nextJob.action}, threadSize: ${nextJob.threadSize}, host: ${nextJob.host}, target: ${nextJob.target}`)
 
     // initialzing
-    jobCreator.keepSize(jobListSizeThreshold, jobList.value)
+    jobCreator.keepSize(jobList.value)
     jobCreator.update()
     jobList.updateExecutionTime()
     jobList.updateStartTimestamp()

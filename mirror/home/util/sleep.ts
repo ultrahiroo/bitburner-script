@@ -1,4 +1,4 @@
-export async function sleep(milisecond: number) {
+export async function sleep(milisecond: number): Promise<void> {
   return new Promise<void>((resolve) => {
     setTimeout(() => {
       resolve()
@@ -6,7 +6,7 @@ export async function sleep(milisecond: number) {
   })
 }
 
-export async function main(ns: NS) {
+export async function main(ns: NS): Promise<void> {
   if ((typeof ns.args[0]) != "number") {
     ns.tprint(`first argument was expected milisecond: ${ns.args[0]}`)
     return

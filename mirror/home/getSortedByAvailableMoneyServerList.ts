@@ -4,7 +4,7 @@ export function getSortedByAvailableMoneyServerList(
   ns: NS,
   serverList: Array<string>,
 ): Array<string> {
-  const itemList = []
+  const itemList: Array<{ name: string, money: number }> = []
   for (let i = 0; i < serverList.length; i++) {
     const host = serverList[i]
     const money = ns.getServerMoneyAvailable(host)
@@ -19,7 +19,7 @@ export function getSortedByAvailableMoneyServerList(
   }
   const sorted = itemList.toSorted((a, b) => b.money - a.money)
 
-  const y = []
+  const y: Array<string> = []
   for (let i = 0; i < sorted.length; i++) {
     y.push(sorted[i].name)
   }

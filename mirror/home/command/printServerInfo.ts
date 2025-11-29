@@ -6,6 +6,7 @@ export async function main(ns: NS): Promise<void> {
   const host = ns.args[0] as string
   ns.tprintRaw(`host: ${host}`)
 
+  const server = ns.getServer(host)
   const maxMoney = ns.getServerMaxMoney(host)
   const money = ns.getServerMoneyAvailable(host)
   ns.tprintRaw(`money: ${ns.formatNumber(money)}/${ns.formatNumber(maxMoney)}`)
@@ -35,7 +36,6 @@ export async function main(ns: NS): Promise<void> {
   const hackChance = ns.hackAnalyzeChance(host)
   ns.tprintRaw(`hack chance: ${ns.formatPercent(hackChance)}`)
 
-  const server = ns.getServer(host)
   const coreSize = server.cpuCores
   const maxRam = server.maxRam
   ns.tprintRaw(`core size: ${coreSize}`)

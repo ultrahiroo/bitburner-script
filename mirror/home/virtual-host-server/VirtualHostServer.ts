@@ -1,9 +1,11 @@
 import { AllocationData } from "./AllocationData.ts"
 import { AllocationTimestamp } from "./AllocationTimestamp.ts"
+import { isPurchasedServer } from "../purchased-server/isPurchasedServer.ts"
 
 export class VirtualHostServer {
   name: string
   isActive: boolean
+  canUpdateSpec: boolean
   initialUsedRam: number
   maxRam: number
   coreSize: number
@@ -15,10 +17,17 @@ export class VirtualHostServer {
   }) {
     this.name = x.name
     this.isActive = false
-    const server = x.ns.getServer(x.name)
-    this.initialUsedRam = server.ramUsed
-    this.maxRam = server.maxRam
-    this.coreSize = server.cpuCores
+    this.canUpdateSpec = ((x.name == "home") || isPurchasedServer(x.name))
+    if (x.ns.serverExists(x.name)) {
+      const server = x.ns.getServer(x.name)
+      this.initialUsedRam = server.ramUsed
+      this.maxRam = server.maxRam
+      this.coreSize = server.cpuCores
+    } else {
+      this.initialUsedRam = 0
+      this.maxRam = 0
+      this.coreSize = 0
+    }
     this.allocationDataList = []
   }
 
@@ -42,7 +51,7 @@ export class VirtualHostServer {
     const newAllocationDataList = Array.from(this.allocationDataList)
     newAllocationDataList.push(data)
 
-    const allocationTimestampList = []
+    const allocationTimestampList: Array<AllocationTimestamp> = []
     for (let i = 0; i < newAllocationDataList.length; i++) {
       const allocationData = newAllocationDataList[i]
 
@@ -86,8 +95,7 @@ export class VirtualHostServer {
     if (!this.isActive) {
       return
     }
-
-    const newList = []
+    const newList: Array<AllocationData> = []
     for (let i = 0; i < this.allocationDataList.length; i++) {
       const allocationData = this.allocationDataList[i]
       if (allocationData.endTimestamp < currentTimestamp) {
@@ -96,6 +104,15 @@ export class VirtualHostServer {
       newList.push(allocationData)
     }
     this.allocationDataList = newList
+  }
+
+  updateSpec(ns: NS): void {
+    if (!this.canUpdateSpec) {
+      return
+    }
+    const server = ns.getServer(this.name)
+    this.maxRam = server.maxRam
+    this.coreSize = server.cpuCores
   }
 }
 
