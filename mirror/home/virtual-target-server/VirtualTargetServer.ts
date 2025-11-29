@@ -1,4 +1,4 @@
-import { calculateServerGrowth } from "../calculateServerGrowth.ts"
+import { calculateServerGrowth } from "../util/calculateServerGrowth.ts"
 
 export class VirtualTargetServer {
   ns: NS

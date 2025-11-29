@@ -7,23 +7,24 @@ export async function main(ns: NS): Promise<void> {
   ns.tprintRaw(`host: ${host}`)
 
   const server = ns.getServer(host)
-  const maxMoney = ns.getServerMaxMoney(host)
-  const money = ns.getServerMoneyAvailable(host)
+  const maxMoney = server.moneyMax ?? NaN
+  const money = server.moneyAvailable ?? NaN
   ns.tprintRaw(`money: ${ns.formatNumber(money)}/${ns.formatNumber(maxMoney)}`)
 
-  const baseSecurityLevel = ns.getServerBaseSecurityLevel(host)
-  const minSecurityLevel = ns.getServerMinSecurityLevel(host)
-  const securityLevel = ns.getServerSecurityLevel(host)
+  const baseSecurityLevel = server.baseDifficulty ?? NaN
+  const minSecurityLevel = server.minDifficulty ?? NaN
+  const securityLevel = server.hackDifficulty ?? NaN
   ns.tprintRaw(`base security level: ${baseSecurityLevel}`)
   ns.tprintRaw(`minimum security level: ${minSecurityLevel}`)
   ns.tprintRaw(`security level: ${securityLevel}`)
 
-  const requiredHackingLevel = ns.getServerRequiredHackingLevel(host)
-  const hackingLevel = ns.getHackingLevel()
+  const requiredHackingLevel = server.requiredHackingSkill ?? NaN
+  const player = ns.getPlayer()
+  const hackingLevel = player.skills.hacking
   ns.tprintRaw(`required hacking level: ${requiredHackingLevel}`)
   ns.tprintRaw(`hacking level: ${hackingLevel}`)
 
-  const growth = ns.getServerGrowth(host)
+  const growth = server.serverGrowth ?? NaN
   ns.tprintRaw(`growth: ${growth}`)
 
   const hackTime = ns.getHackTime(host)

@@ -9,10 +9,10 @@ export class AllocationData {
     endTimestamp: number
   }) {
     if (x.usedRam <= 0) {
-      throw new Error("invalid value")
+      throw new Error(`invalid value, x.usedRam: ${x.usedRam}`)
     }
     if (x.startTimestamp >= x.endTimestamp) {
-      throw new Error("invalid value")
+      throw new Error(`invalid value, startTimestamp: ${x.startTimestamp}, endTimestamp: ${x.endTimestamp}`)
     }
     this.usedRam = x.usedRam
     this.startTimestamp = x.startTimestamp

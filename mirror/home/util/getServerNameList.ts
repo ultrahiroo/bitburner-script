@@ -15,13 +15,13 @@ function _scanRecursive(ns: NS, host: string, parent: string, y: Array<string>):
   }
 }
 
-export function getServerList(ns: NS): Array<string> {
+export function getServerNameList(ns: NS): Array<string> {
   const y: Array<string> = ["home"]
   _scanRecursive(ns, "home", "home", y)
   return y
 }
 
 export async function main(ns: NS): Promise<void> {
-  const serverList = getServerList(ns)
-  ns.tprint(`serverList: ${serverList}`)
+  const serverNameList = getServerNameList(ns)
+  ns.tprint(`serverNameList: ${serverNameList}`)
 }

@@ -1,5 +1,4 @@
 import { Action } from "./Action.ts"
-import { getServerList } from "../getServerList.ts";
 
 export class ScriptInfo {
   ns: NS
@@ -32,6 +31,16 @@ export class ScriptInfo {
       "v3/CHECK_PORT_NUMBER.ts",
       "v3/CheckData.ts",
     ]
+
+    if (this.hackScriptRam <= 0) {
+      throw new Error("invalid error")
+    }
+    if (this.weakenScriptRam <= 0) {
+      throw new Error("invalid error")
+    }
+    if (this.growScriptRam <= 0) {
+      throw new Error("invalid error")
+    }
   }
 
   scpList(
@@ -62,19 +71,6 @@ export class ScriptInfo {
     return true
   }
 
-  installList(serverList: Array<string>): boolean {
-    for (let i = 0; i < serverList.length; i++) {
-      const server = serverList[i]
-      if (!this.ns.hasRootAccess(server)) {
-        continue
-      }
-      if (!this.install(server)) {
-        return false
-      }
-    }
-    return true
-  }
-
   getScript(action: Action): string {
     if (action == Action.WEAKEN) {
       return this.weakenScript
@@ -83,12 +79,10 @@ export class ScriptInfo {
     } else if (action == Action.HACK) {
       return this.hackScript
     }
-    return ""
+    throw new Error(`invalid value, action: ${action}`)
   }
 }
 
 export async function main(ns: NS): Promise<void> {
-  const scriptInfo = new ScriptInfo({ ns: ns })
-  const serverList = getServerList(ns)
-  scriptInfo.installList(serverList)
+  const _ = new ScriptInfo({ ns: ns })
 }

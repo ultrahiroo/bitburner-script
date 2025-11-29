@@ -1,4 +1,4 @@
-import { isPurchasedServer } from "./purchased-server/isPurchasedServer.ts";
+import { isPurchasedServer } from "../purchased-server/isPurchasedServer.ts";
 
 export function getRootAccess(ns: NS, host: string): boolean {
   if (host == "home") {

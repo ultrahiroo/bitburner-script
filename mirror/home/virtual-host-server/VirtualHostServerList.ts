@@ -1,7 +1,7 @@
 import { AllocationData } from "./AllocationData.ts"
 import { VirtualHostServer } from "./VirtualHostServer.ts"
 import { getHostServerNameList } from "./getHostServerNameList.ts"
-import { getServerList } from "../getServerList.ts"
+import { getServerNameList } from "../util/getServerNameList.ts"
 import { isPurchasedServer } from "../purchased-server/isPurchasedServer.ts"
 
 export class VirtualHostServerList {
@@ -13,7 +13,7 @@ export class VirtualHostServerList {
   }) {
     this.ns = x.ns
     this.value = []
-    const serverList = getServerList(x.ns)
+    const serverList = getServerNameList(x.ns)
     const hostServerNameList = getHostServerNameList(x.ns, serverList)
     for (let i = 0; i < hostServerNameList.length; i++) {
       const hostServerName = hostServerNameList[i]
@@ -78,7 +78,9 @@ export async function main(ns: NS): Promise<void> {
 
   for (let i = 0; i < virtualHostServerList.value.length; i++) {
     const virtualHostServer = virtualHostServerList.value[i]
-    if (!ns.hasRootAccess(virtualHostServer.name)) {
+    const severName = virtualHostServer.name
+    const server = ns.getServer(severName)
+    if (!server.hasAdminRights) {
       continue
     }
     virtualHostServer.setActive()

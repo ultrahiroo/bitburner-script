@@ -1,10 +1,10 @@
-import { MIN_SLEEP_TIME } from "../MIN_SLEEP_TIME.ts"
+import { MIN_SLEEP_TIME } from "../util/MIN_SLEEP_TIME.ts"
 import { JobCreator } from "./JobCreator.ts"
 import { JobList } from "./JobList.ts"
 
 export async function main(ns: NS): Promise<void> {
   ns.disableLog("ALL")
-  const sequentialLag = 1000 // milisecond
+  const sequentialLag = 1 * 1000 // milisecond
   const maxAdditionalTime = sequentialLag + (1 * 1000) // milisecond
   const verbose = false
   const jobCreator = new JobCreator({
@@ -18,7 +18,7 @@ export async function main(ns: NS): Promise<void> {
     securityThresholdMarginRatio: 0.10,
     moneyThresholdMarginRatio: 0.10,
     startMarginTime: 3 * 1000,
-    endMarginTime: 3 * 1000,
+    endMarginTime: 10 * 1000,
   })
   const jobList = new JobList({
     ns: ns,

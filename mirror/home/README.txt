@@ -6,9 +6,10 @@
 - [x] Do not use ns.sleep(). Instead, use ns.asleep()
 - [x] Do not use any barrel files such as index.js(.ts), because of incorrect ram usage calculation
 - [ ] Do not use ns.getServerMoneyAvailable()
-- [ ] Do not use ns.getServerMaxMoney()
+- [x] Do not use ns.getServerMaxMoney()
 - [ ] Do not use ns.getServerSecurityLevel()
-- [ ] Do not use ns.getServerMinSecurityLevel()
+- [x] Do not use ns.getServerMinSecurityLevel()
+- [x] Do not use ns.hasRootAccess()
 
 # Reference
 - JavaScriptの1msは4ms - https://qiita.com/suetake/items/6c20d885d833ca792dfa

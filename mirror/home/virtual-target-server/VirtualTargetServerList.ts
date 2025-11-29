@@ -1,6 +1,6 @@
 import { VirtualTargetServer } from "./VirtualTargetServer.ts"
-import { getRootAccess } from "../getRootAccess.ts"
-import { getServerList } from "../getServerList.ts"
+import { getRootAccess } from "../util/getRootAccess.ts"
+import { getServerNameList } from "../util/getServerNameList.ts"
 import { getTargetServerNameList } from "./getTargetSeverNameList.ts"
 
 export class VirtualTargetServerList {
@@ -12,7 +12,7 @@ export class VirtualTargetServerList {
   }) {
     this.ns = x.ns
     this.value = []
-    const serverList = getServerList(x.ns)
+    const serverList = getServerNameList(x.ns)
     const targetServerNameList = getTargetServerNameList(x.ns, serverList)
     for (let i = 0; i < targetServerNameList.length; i++) {
       const targetServerName = targetServerNameList[i]
@@ -45,7 +45,8 @@ export class VirtualTargetServerList {
         continue
       }
       const serverName = virtualTargetServer.name
-      if (!this.ns.hasRootAccess(serverName)) {
+      const server = this.ns.getServer(serverName)
+      if (!server.hasAdminRights) {
         if (!getRootAccess(this.ns, serverName)) {
           continue
         }

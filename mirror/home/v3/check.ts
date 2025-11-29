@@ -6,6 +6,7 @@ export function check(
   thresholdDelayTime: number, // milisecond
 ): void {
   ns.print(`target: ${checkData.target}, action: ${checkData.action}`)
+  const server = ns.getServer(checkData.target)
 
   const startDelayTime = checkData.actualStartTimestamp - checkData.expectStartTimestamp
   const passStartTimestamp = startDelayTime < thresholdDelayTime
@@ -19,13 +20,13 @@ export function check(
     ns.print(`ERROR test of EndTimestamp has failed, delayed ${endDelayTime} milisecond, expectEndTimestamp: ${checkData.expectEndTimestamp}, actualEndTimestamp: ${checkData.actualEndTimestamp}`)
   }
 
-  const actualMoney = ns.getServerMoneyAvailable(checkData.target)
+  const actualMoney = server.moneyAvailable ?? NaN
   const passMoney = (actualMoney == checkData.expectMoney)
   if (!passMoney) {
     ns.print(`ERROR: test of Money has failed, expectedMoney: ${checkData.expectMoney}, actualMoney: ${actualMoney}`)
   }
 
-  const actualSecurity = ns.getServerSecurityLevel(checkData.target)
+  const actualSecurity = server.hackDifficulty ?? NaN
   const passSecurity = (checkData.expectSecurity == actualSecurity)
   if (!passSecurity) {
     ns.print(`ERROR: test of Security has failed, expectedSecurity: ${checkData.expectSecurity}, actualSecurity: ${actualSecurity}`)

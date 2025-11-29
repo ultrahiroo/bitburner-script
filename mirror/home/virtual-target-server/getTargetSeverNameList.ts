@@ -1,4 +1,4 @@
-import { getServerList } from "../getServerList.ts"
+import { getServerNameList } from "../util/getServerNameList.ts"
 import { isPurchasedServer } from "../purchased-server/isPurchasedServer.ts"
 
 export function getTargetServerNameList(
@@ -24,7 +24,7 @@ export function getTargetServerNameList(
 }
 
 export async function main(ns: NS): Promise<void> {
-  const serverList = getServerList(ns)
+  const serverList = getServerNameList(ns)
   const targetServerList = getTargetServerNameList(ns, serverList)
   ns.tprint(`targetServerList: ${targetServerList}`)
 }

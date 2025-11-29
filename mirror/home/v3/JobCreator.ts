@@ -5,7 +5,7 @@ import { ScriptInfo } from "./ScriptInfo.ts"
 import { VirtualHostServerList } from "../virtual-host-server/VirtualHostServerList.ts"
 import { VirtualTargetServer } from "../virtual-target-server/VirtualTargetServer.ts"
 import { VirtualTargetServerList } from "../virtual-target-server/VirtualTargetServerList.ts"
-import { getRootAccess } from "../getRootAccess.ts"
+import { getRootAccess } from "../util/getRootAccess.ts"
 
 
 export class JobCreator {
@@ -37,6 +37,12 @@ export class JobCreator {
     startMarginTime: number
     endMarginTime: number
   }) {
+    if (!(x.startAllocationMarginTime > 0)) {
+      throw new Error(`invalid value, startAllocationMarginTime: ${x.startAllocationMarginTime}`)
+    }
+    if (!(x.endAllocationMarginTime > 0)) {
+      throw new Error(`invalid value, endAllocationMarginTime: ${x.endAllocationMarginTime}`)
+    }
     if (!((0 <= x.securityThresholdMarginRatio) && (x.securityThresholdMarginRatio < 1))) {
       throw new Error(`invalid value, securityThresholdMarginRatio: ${x.securityThresholdMarginRatio}`)
     }
@@ -48,6 +54,9 @@ export class JobCreator {
     }
     if (!(x.endMarginTime > 0)) {
       throw new Error(`invalid value, endMarginTime: ${x.endMarginTime}`)
+    }
+    if (!(x.endMarginTime > x.startMarginTime)) {
+      throw new Error(`invalid value, endMarginTime: ${x.endMarginTime}, startMarginTime: ${x.startMarginTime}`)
     }
 
     this.ns = x.ns
@@ -79,6 +88,9 @@ export class JobCreator {
       this.weakenMaxThreadSize,
       Math.ceil((virtualTargetServer.security - securityThreshold) / this.ns.weakenAnalyze(1, 1)),
     )
+    if (singleCoreWeakenThreadSize == 0) {
+      throw new Error(`singleCoreWeakenThreadSize: ${singleCoreWeakenThreadSize}`)
+    }
     const singleCoreRequiredRam = this.scriptInfo.weakenScriptRam * singleCoreWeakenThreadSize
     const executionTime = this.ns.getWeakenTime(target)
 
@@ -107,6 +119,9 @@ export class JobCreator {
       this.weakenMaxThreadSize,
       Math.ceil((virtualTargetServer.security - securityThreshold) / this.ns.weakenAnalyze(1, coreSize)),
     )
+    if (weakenThreadSize == 0) {
+      throw new Error(`weakenThreadSize: ${weakenThreadSize}`)
+    }
     const requiredRam = this.scriptInfo.weakenScriptRam * weakenThreadSize
     const allocationData = new AllocationData({
       usedRam: requiredRam,
@@ -148,6 +163,9 @@ export class JobCreator {
       this.growMaxThreadSize,
       Math.ceil(this.ns.growthAnalyze(target, multiplier, 1)),
     )
+    if (singleCoreGrowThreadSize == 0) {
+      throw new Error(`singleCoreGrowThreadSize: ${singleCoreGrowThreadSize}`)
+    }
     const singleCoreRequiredRam = this.scriptInfo.growScriptRam * singleCoreGrowThreadSize
     const executionTime = this.ns.getGrowTime(target)
 
@@ -175,6 +193,9 @@ export class JobCreator {
       this.growMaxThreadSize,
       Math.ceil(this.ns.growthAnalyze(target, multiplier, coreSize)),
     )
+    if (growThreadSize == 0) {
+      throw new Error(`growThreadSize: ${growThreadSize}`)
+    }
 
     const requiredRam = this.scriptInfo.growScriptRam * growThreadSize
     const allocationData = new AllocationData({
@@ -211,8 +232,14 @@ export class JobCreator {
     const target = virtualTargetServer.name
     const hackThreadSize = Math.min(
       this.hackMaxThreadSize,
-      Math.trunc(this.ns.weakenAnalyze(1, 1) / this.ns.hackAnalyzeSecurity(1))
+      Math.max(
+        Math.trunc(this.ns.weakenAnalyze(1, 1) / this.ns.hackAnalyzeSecurity(1)),
+        1,
+      )
     )
+    if (hackThreadSize == 0) {
+      throw new Error(`hackThreadSize: ${hackThreadSize}`)
+    }
     const requiredRam = this.scriptInfo.hackScriptRam * hackThreadSize
     const executionTime = this.ns.getHackTime(target)
 
@@ -286,20 +313,24 @@ export class JobCreator {
         }
         virtualTargetServer.timestamp += this.sequentialLag
 
-        if (!this.pushGrowJob(virtualTargetServer, moneyThreshold, yList)) {
+        if (virtualTargetServer.money < moneyThreshold) {
+          if (!this.pushGrowJob(virtualTargetServer, moneyThreshold, yList)) {
+            virtualTargetServer.timestamp += this.sequentialLag
+            continue
+          }
           virtualTargetServer.timestamp += this.sequentialLag
-          continue
+          virtualTargetServer.timestamp += this.sequentialLag
         }
-        virtualTargetServer.timestamp += this.sequentialLag
-        virtualTargetServer.timestamp += this.sequentialLag
 
-        if (!this.pushWeakJob(virtualTargetServer, securityThreshold, yList)) {
+        if (virtualTargetServer.security > securityThreshold) {
+          if (!this.pushWeakJob(virtualTargetServer, securityThreshold, yList)) {
+            virtualTargetServer.timestamp += this.sequentialLag
+            continue
+          }
           virtualTargetServer.timestamp += this.sequentialLag
-          continue
+          virtualTargetServer.timestamp += this.sequentialLag
+          virtualTargetServer.timestamp += this.sequentialLag
         }
-        virtualTargetServer.timestamp += this.sequentialLag
-        virtualTargetServer.timestamp += this.sequentialLag
-        virtualTargetServer.timestamp += this.sequentialLag
       }
     }
   }
@@ -324,7 +355,8 @@ export class JobCreator {
         continue
       }
       const serverName = virtualHostServer.name
-      if (!this.ns.hasRootAccess(serverName)) {
+      const server = this.ns.getServer(serverName)
+      if (!server.hasAdminRights) {
         if (!getRootAccess(this.ns, serverName)) {
           continue
         }
